@@ -1,38 +1,28 @@
 package parking
 
-const val parkingRows = 1
-const val parkingPlaces = 20
-
 data class Car(val registrationNumber: String, val color: String)
 
-class Parking(private val size: Int) {
-    private var parkingLot = MutableList(parkingRows) {
-        MutableList<Car>(size) { Car("", "") }
-    }
+class Parking(size: Int) {
+    private var parkingLot: MutableList<Car> = MutableList(size) { Car("", "") }
 
-    fun create(size: Int) {
+    init {
         println("Created a parking lot with $size spots.")
-        parkingLot = MutableList(parkingRows) {
-            MutableList<Car>(size) { Car("", "") }
-        }
     }
 
     fun status() {
-        var parking = false
-        parkingLot[0].forEach {
-            if (it != Car("", "")) {
-                parking = true
-                println("${parkingLot[0].indexOf(it) + 1} ${it.registrationNumber} ${it.color}")
-            }
+        val list = parkingLot.filter { it != Car("", "") }
+        if (list.isEmpty()) {
+            println("Parking lot is empty.")
+            return
         }
-        if (!parking) println("Parking lot is empty.")
+        list.forEach { println("${parkingLot.indexOf(it) + 1} ${it.registrationNumber} ${it.color}") }
     }
 
     fun park(registrationNumber: String, color: String) {
-        parkingLot[0].forEach {
+        parkingLot.forEach {
             if (it == Car("", "")) {
-                val spot = parkingLot[0].indexOf(it)
-                parkingLot[0][spot] = Car(registrationNumber, color)
+                val spot = parkingLot.indexOf(it)
+                parkingLot[spot] = Car(registrationNumber, color)
                 println("$color car parked in spot ${spot + 1}.")
                 return
             }
@@ -41,41 +31,64 @@ class Parking(private val size: Int) {
     }
 
     fun leave(spot: Int) {
-        if (parkingLot[0][spot - 1] == Car("", "")) {
+        if (parkingLot[spot - 1] == Car("", "")) {
             println("There is no car in spot $spot.")
         } else {
-            parkingLot[0][spot - 1] = Car("", "")
+            parkingLot[spot - 1] = Car("", "")
             println("Spot $spot is free.")
         }
     }
 
+    fun regByColor(color: String) {
+        val list = filterCarsBy(color, "color")
+        println(list!!.joinToString { it.registrationNumber })
+    }
 
+    fun spotByColor(color: String) {
+        val list = filterCarsBy(color, "color")
+        println(list!!.joinToString { "${parkingLot.indexOf(it) + 1}" })
+    }
+
+    fun spotByReg(reg: String) {
+        val list = filterCarsBy(reg, "registrationNumber")
+        println(list!!.joinToString { "${parkingLot.indexOf(it) + 1}" })
+    }
+    private fun filterCarsBy(filter: String, filterBase: String): List<Car>? {
+        var list: List<Car>? = null
+        when (filterBase) {
+            "color" -> {
+                list = parkingLot.filter { it.color.equals(filter, true) }
+                if (list.isEmpty()) throw IllegalStateException("No cars with color $filter were found.")
+            }
+            "registrationNumber" -> {
+                list = parkingLot.filter { it.registrationNumber.equals(filter, true) }
+                if (list.isEmpty()) throw IllegalStateException("No cars with registration number $filter were found.")
+            }
+        }
+        return list
+    }
 }
 
 fun main() {
-    val parking: Parking
+    var parking: Parking? = null
 
     while (true) {
         val command = readln().split(" ")
-        if (command.first() == "create" && command.last().matches("[1-9][0-9]?".toRegex())) {
-            println("Created a parking lot with ${command.last()} spots.")
-            parking = Parking(command.last().toInt())
-            break
-        } else if (command.first() == "exit") {
-            return
-        } else {
+        try {
+            when (command.first()) {
+                "park" -> parking!!.park(command[1], command[2])
+                "leave" -> parking!!.leave(command[1].toInt())
+                "status" -> parking!!.status()
+                "create" -> parking = Parking(command.last().toInt())
+                "reg_by_color" -> parking!!.regByColor(command.last())
+                "spot_by_color" -> parking!!.spotByColor(command.last())
+                "spot_by_reg" -> parking!!.spotByReg(command.last())
+                "exit" -> break
+            }
+        } catch (e: IllegalStateException) {
+            println(e.message)
+        } catch (e: Exception) {
             println("Sorry, a parking lot has not been created.")
-        }
-    }
-
-    while (true) {
-        val command = readln().split(" ")
-        when (command.first()) {
-            "park" -> parking.park(command[1], command[2])
-            "leave" -> parking.leave(command[1].toInt())
-            "status" -> parking.status()
-            "create" -> parking.create(command.last().toInt())
-            "exit" -> break
         }
     }
 }
